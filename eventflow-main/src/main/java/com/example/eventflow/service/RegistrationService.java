@@ -77,6 +77,12 @@ public class RegistrationService {
             throw ApiException.conflict("Registration is not open yet: this event has no capacity set");
         }
         AppUser user = users.findById(userId).orElseThrow(() -> ApiException.notFound("User not found"));
+        if (event.getRegistrationDeadline() != null && java.time.LocalDate.now().isAfter(event.getRegistrationDeadline())) {
+            throw ApiException.conflict("The registration deadline for this event has passed");
+        }
+        if (user.getRole() == com.example.eventflow.model.Role.PARTICIPANT && !user.hasCompleteStudentProfile()) {
+            throw ApiException.conflict("Complete your student profile (USN, department, year) before registering");
+        }
 
         Registration reg = registrations.findByEventIdAndUserId(eventId, userId).orElse(null);
         if (reg != null) {
@@ -258,7 +264,8 @@ public class RegistrationService {
                     e.getLocation(), e.getStatus(), u.getId(), u.getName(), u.getEmail(), r.getStatus(), position,
                     r.getStatus() == RegistrationStatus.CONFIRMED ? r.getTicketId() : null,
                     r.getRegisteredAt(), r.getCancelledAt(), r.getCheckedInAt(), r.isCheckedIn(),
-                    cert == null ? null : cert.getId(), cert == null ? null : cert.getCertificateCode());
+                    cert == null ? null : cert.getId(), cert == null ? null : cert.getCertificateCode(),
+                    u.getUsn(), u.getDepartment(), u.getYearOfStudy());
         }).toList();
     }
 }

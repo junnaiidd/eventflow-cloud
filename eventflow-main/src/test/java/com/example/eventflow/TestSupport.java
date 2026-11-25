@@ -26,7 +26,13 @@ public abstract class TestSupport {
 
     protected AppUser newUser(String name, Role role) {
         String email = name.toLowerCase().replace(' ', '.') + "." + UUID.randomUUID().toString().substring(0, 8) + "@test.local";
-        return users.save(new AppUser(name, email, encoder.encode("Password@123"), role));
+        AppUser user = new AppUser(name, email, encoder.encode("Password@123"), role);
+        if (role == Role.PARTICIPANT) { // students need a profile before they can register for events
+            user.setUsn("T" + UUID.randomUUID().toString().replace("-", "").substring(0, 9).toUpperCase());
+            user.setDepartment("Computer Science & Engineering");
+            user.setYearOfStudy(2);
+        }
+        return users.save(user);
     }
 
     protected Event newEvent(AppUser organizer, int capacity) {

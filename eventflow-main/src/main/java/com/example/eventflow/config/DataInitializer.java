@@ -1,10 +1,8 @@
 package com.example.eventflow.config;
 
-import com.example.eventflow.model.AppUser;
-import com.example.eventflow.model.Event;
-import com.example.eventflow.model.Participant;
-import com.example.eventflow.repository.AppUserRepository;
-import com.example.eventflow.repository.EventRepository;
+import java.time.LocalDate;
+import java.time.LocalTime;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,14 +10,17 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
+import com.example.eventflow.model.AppUser;
+import com.example.eventflow.model.Event;
+import com.example.eventflow.model.Participant;
+import com.example.eventflow.repository.AppUserRepository;
+import com.example.eventflow.repository.EventRepository;
 
 /**
- * Initialize database with sample data.
+ * Sample college events.
  * Only runs when app.seed.enabled=true (local default; off in the "prod" profile) and the events table is
- * still empty, so a persistent database (RDS) never gets duplicate sample events on restart.
- * Sample dates are relative to today so the demo always shows upcoming / completed events.
+ * still empty, so a persistent database never gets duplicate sample events on restart.
+ * Dates are relative to today so the demo always shows upcoming / completed events.
  */
 @Component
 @Order(2)
@@ -47,146 +48,85 @@ public class DataInitializer implements CommandLineRunner {
                         log.info("Events already exist, skipping sample data");
                         return;
                 }
-                log.info("Initializing sample data...");
+                log.info("Initializing sample college events...");
                 LocalDate today = LocalDate.now();
-                // Demo organizer owns the sample events (null when demo accounts are disabled: admin-managed)
                 AppUser organizer = appUserRepository.findByEmail(AccountSeeder.DEMO_ORGANIZER).orElse(null);
 
-                // Event 1: Annual Tech Conference
-                Event event1 = Event.builder()
-                                .name("Annual Tech Conference 2025")
-                                .eventDate(today.plusDays(30))
-                                .eventTime(LocalTime.of(9, 0))
-                                .location("Silicon Valley Convention Center")
-                                .type("Conference")
-                                .budget(5625000.0) // ₹56,25,000 (75000 USD to INR approx)
-                                .status("Upcoming")
-                                .attendees(500)
-                                .description("A major technology conference featuring industry leaders and innovators.")
-                                .contactEmail("tech@conference.com")
-                                .organizer(organizer)
-                                .build();
+                Event technova = event("TechNova 2026 - Technical Symposium", "Technical Event", "Computer Science & Engineering",
+                                today.plusDays(30), 9, 17, today.plusDays(25), "Main Auditorium", 500, 500, "Upcoming", 150000.0,
+                                "The annual technical symposium with paper presentations, project expos and technical quizzes.",
+                                "technova@college.local", organizer);
+                technova.addParticipant(Participant.builder().name("Dr. Meena Krishnan").role("Faculty Coordinator").build());
+                technova.addParticipant(Participant.builder().name("Rahul Verma").role("Student Coordinator").build());
 
-                event1.addParticipant(Participant.builder().name("John Doe").role("Speaker").build());
-                event1.addParticipant(Participant.builder().name("Jane Smith").role("Organizer").build());
-                event1.addParticipant(Participant.builder().name("Mike Johnson").role("Sponsor").build());
+                Event fest = event("Rhythm - Inter-College Cultural Fest", "Cultural Event", null,
+                                today, 17, 21, today.minusDays(1), "Open Air Theatre", 2000, 2000, "In Progress", 300000.0,
+                                "Music, dance and drama competitions with teams from neighbouring colleges.",
+                                "culturals@college.local", organizer);
+                fest.addParticipant(Participant.builder().name("Sneha Kulkarni").role("Cultural Secretary").build());
 
-                // Event 2: Summer Music Festival
-                Event event2 = Event.builder()
-                                .name("Summer Music Festival")
-                                .eventDate(today)
-                                .eventTime(LocalTime.of(17, 0))
-                                .location("Central Park Amphitheater")
-                                .type("Concert")
-                                .budget(9000000.0) // ₹90,00,000
-                                .status("In Progress")
-                                .attendees(2000)
-                                .description("An outdoor music festival featuring multiple artists and food vendors.")
-                                .contactEmail("info@musicfest.com")
-                                .organizer(organizer)
-                                .build();
+                Event python = event("Python Workshop for Beginners", "Workshop", "Information Science & Engineering",
+                                today.plusDays(7), 10, 13, today.plusDays(5), "Computer Lab 3", 50, 50, "Upcoming", 15000.0,
+                                "A hands-on introduction to Python programming for first and second year students.",
+                                "ise@college.local", organizer);
+                python.addParticipant(Participant.builder().name("Prof. Suresh Rao").role("Resource Person").build());
 
-                event2.addParticipant(Participant.builder().name("Sarah Williams").role("Artist").build());
-                event2.addParticipant(Participant.builder().name("Tom Brown").role("Manager").build());
+                Event lecture = event("Guest Lecture: The Future of Machine Learning", "Guest Lecture", "AI & Data Science",
+                                today.minusDays(30), 11, 13, today.minusDays(32), "Seminar Hall", 200, 200, "Completed", 20000.0,
+                                "An industry expert talks about how machine learning is changing engineering careers.",
+                                "aids@college.local", organizer);
+                lecture.addParticipant(Participant.builder().name("Anita Desai").role("Guest Speaker").build());
 
-                // Event 3: Corporate Leadership Workshop
-                Event event3 = Event.builder()
-                                .name("Corporate Leadership Workshop")
-                                .eventDate(today.plusDays(7))
-                                .eventTime(LocalTime.of(10, 0))
-                                .location("Downtown Business Center")
-                                .type("Workshop")
-                                .budget(1125000.0) // ₹11,25,000
-                                .status("Upcoming")
-                                .attendees(50)
-                                .description("Professional development workshop for executives and managers.")
-                                .contactEmail("contact@leadership.com")
-                                .organizer(organizer)
-                                .build();
+                Event hackathon = event("HackSprint - 12 Hour Hackathon", "Hackathon", "Computer Science & Engineering",
+                                today.plusDays(14), 9, 21, today.plusDays(10), "Innovation Lab", 150, 150, "Upcoming", 80000.0,
+                                "Teams build a working prototype in 12 hours. Prizes for the top three projects.",
+                                "hacksprint@college.local", organizer);
+                hackathon.addParticipant(Participant.builder().name("Karthik Nair").role("Technical Lead").build());
 
-                event3.addParticipant(Participant.builder().name("Emily Davis").role("Facilitator").build());
-                event3.addParticipant(Participant.builder().name("Robert Wilson").role("Coordinator").build());
+                Event sports = event("Annual Sports Meet", "Sports Event", null,
+                                today.minusDays(45), 8, 17, today.minusDays(50), "College Ground", 300, 300, "Completed", 120000.0,
+                                "Track and field events and inter-department team sports.",
+                                "sports@college.local", organizer);
+                sports.addParticipant(Participant.builder().name("Coach R. Patil").role("Sports Director").build());
 
-                // Event 4: James & Emma Wedding
-                Event event4 = Event.builder()
-                                .name("James & Emma Wedding")
-                                .eventDate(today.minusDays(30))
-                                .eventTime(LocalTime.of(16, 0))
-                                .location("Seaside Resort & Spa")
-                                .type("Wedding")
-                                .budget(6375000.0) // ₹63,75,000
-                                .status("Completed")
-                                .attendees(200)
-                                .description("Beautiful beachfront wedding ceremony and reception.")
-                                .contactEmail("james.emma@wedding.com")
-                                .organizer(organizer)
-                                .build();
+                Event lab = event("Spring Boot Hands-on Lab", "Workshop", "Computer Science & Engineering",
+                                today.plusDays(5), 11, 14, today.plusDays(4), "Computer Lab 2, CSE Block", 3, 3, "Upcoming", 25000.0,
+                                "A small hands-on lab with only 3 seats. Register to get a QR ticket; when it is full you join the waitlist.",
+                                "lab@college.local", organizer);
+                lab.addParticipant(Participant.builder().name("Prof. Anita Rao").role("Facilitator").build());
 
-                event4.addParticipant(Participant.builder().name("James Anderson").role("Groom").build());
-                event4.addParticipant(Participant.builder().name("Emma Taylor").role("Bride").build());
+                // Submitted by the organizer, waiting for the administrator (shown on the admin Approvals page)
+                Event robotics = event("Robotics Seminar", "Seminar", "Mechanical Engineering",
+                                today.plusDays(20), 14, 16, today.plusDays(18), "Seminar Hall", 80, 80, "Pending Approval", 10000.0,
+                                "Seminar on industrial robotics and automation.",
+                                "mech@college.local", organizer);
 
-                // Event 5: Product Launch Event
-                Event event5 = Event.builder()
-                                .name("Product Launch Event")
-                                .eventDate(today.plusDays(14))
-                                .eventTime(LocalTime.of(14, 0))
-                                .location("Innovation Hub")
-                                .type("Corporate")
-                                .budget(3375000.0) // ₹33,75,000
-                                .status("Upcoming")
-                                .attendees(150)
-                                .description("Launch event for the new product line with demos and presentations.")
-                                .contactEmail("launch@company.com")
-                                .organizer(organizer)
-                                .build();
-
-                event5.addParticipant(Participant.builder().name("Alex Martinez").role("Product Manager").build());
-                event5.addParticipant(Participant.builder().name("Lisa Chen").role("Marketing Director").build());
-
-                // Event 6: Charity Gala Dinner
-                Event event6 = Event.builder()
-                                .name("Charity Gala Dinner")
-                                .eventDate(today.minusDays(45))
-                                .eventTime(LocalTime.of(19, 0))
-                                .location("Grand Hotel Ballroom")
-                                .type("Other")
-                                .budget(4875000.0) // ₹48,75,000
-                                .status("Completed")
-                                .attendees(300)
-                                .description("Annual charity fundraising gala with dinner and auction.")
-                                .contactEmail("contact@charitygala.org")
-                                .organizer(organizer)
-                                .build();
-
-                event6.addParticipant(Participant.builder().name("David Lee").role("Organizer").build());
-                event6.addParticipant(Participant.builder().name("Maria Garcia").role("Volunteer").build());
-
-                // Event 7: small-capacity lab, used to demonstrate tickets, the waitlist and certificates
-                Event event7 = Event.builder()
-                                .name("Spring Boot Hands-on Lab")
-                                .eventDate(today.plusDays(5))
-                                .eventTime(LocalTime.of(11, 0))
-                                .location("Computer Lab 2, CSE Block")
-                                .type("Workshop")
-                                .budget(25000.0)
-                                .status("Upcoming")
-                                .attendees(3)
-                                .capacity(3)
-                                .description("A small hands-on lab with only 3 seats. Register to get a QR ticket; when it is full you join the waitlist.")
-                                .contactEmail("lab@eventflow.local")
-                                .organizer(organizer)
-                                .build();
-                event7.addParticipant(Participant.builder().name("Prof. Anita Rao").role("Facilitator").build());
-
-                // Save all events
-                eventRepository.save(event1);
-                eventRepository.save(event2);
-                eventRepository.save(event3);
-                eventRepository.save(event4);
-                eventRepository.save(event5);
-                eventRepository.save(event6);
-                eventRepository.save(event7);
-
+                for (Event e : new Event[] { technova, fest, python, lecture, hackathon, sports, lab, robotics }) {
+                        eventRepository.save(e);
+                }
                 log.info("Sample data initialized successfully! Total events: {}", eventRepository.count());
+        }
+
+        private static Event event(String name, String category, String department, LocalDate date, int startHour, int endHour,
+                        LocalDate deadline, String venue, int attendees, int capacity, String status, double budget,
+                        String description, String contact, AppUser organizer) {
+                Event e = Event.builder()
+                                .name(name)
+                                .eventDate(date)
+                                .eventTime(LocalTime.of(startHour, 0))
+                                .location(venue)
+                                .type(category)
+                                .budget(budget)
+                                .status(status)
+                                .attendees(attendees)
+                                .capacity(capacity)
+                                .description(description)
+                                .contactEmail(contact)
+                                .organizer(organizer)
+                                .build();
+                e.setDepartment(department);
+                e.setEndTime(LocalTime.of(endHour, 0));
+                e.setRegistrationDeadline(deadline);
+                return e;
         }
 }

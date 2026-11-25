@@ -51,6 +51,14 @@ public class EventDTO {
     private String contactEmail;
     private List<ParticipantDTO> participants;
 
+    // ---- College fields (the existing "type" field is the event category) ----
+    @Size(max = 100, message = "Department name is too long")
+    private String department;
+    @JsonFormat(pattern = "HH:mm")
+    private LocalTime endTime;
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate registrationDeadline;
+
     /** Maximum confirmed registrations (writable). */
     @Min(value = 0, message = "Capacity must not be negative")
     @Max(value = 1000000, message = "Capacity is too large")
@@ -185,6 +193,12 @@ public class EventDTO {
         this.updatedAt = updatedAt;
     }
 
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+    public LocalTime getEndTime() { return endTime; }
+    public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
+    public LocalDate getRegistrationDeadline() { return registrationDeadline; }
+    public void setRegistrationDeadline(LocalDate registrationDeadline) { this.registrationDeadline = registrationDeadline; }
     public Integer getCapacity() { return capacity; }
     public void setCapacity(Integer capacity) { this.capacity = capacity; }
     public Long getOrganizerId() { return organizerId; }
@@ -220,6 +234,9 @@ public class EventDTO {
         private LocalDate createdAt;
         private LocalDate updatedAt;
         private Integer capacity;
+        private String department;
+        private LocalTime endTime;
+        private LocalDate registrationDeadline;
         private Long organizerId;
         private String organizerName;
         private String posterUrl;
@@ -228,6 +245,9 @@ public class EventDTO {
         private Integer availableSeats;
 
         public EventDTOBuilder capacity(Integer v) { this.capacity = v; return this; }
+        public EventDTOBuilder department(String v) { this.department = v; return this; }
+        public EventDTOBuilder endTime(LocalTime v) { this.endTime = v; return this; }
+        public EventDTOBuilder registrationDeadline(LocalDate v) { this.registrationDeadline = v; return this; }
         public EventDTOBuilder organizerId(Long v) { this.organizerId = v; return this; }
         public EventDTOBuilder organizerName(String v) { this.organizerName = v; return this; }
         public EventDTOBuilder posterUrl(String v) { this.posterUrl = v; return this; }
@@ -322,6 +342,9 @@ public class EventDTO {
             dto.createdAt = this.createdAt;
             dto.updatedAt = this.updatedAt;
             dto.capacity = this.capacity;
+            dto.department = this.department;
+            dto.endTime = this.endTime;
+            dto.registrationDeadline = this.registrationDeadline;
             dto.organizerId = this.organizerId;
             dto.organizerName = this.organizerName;
             dto.posterUrl = this.posterUrl;

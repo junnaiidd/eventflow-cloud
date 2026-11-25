@@ -83,6 +83,18 @@ public class Event {
     @Min(value = 0, message = "Capacity must not be negative")
     private Integer capacity;
 
+    /** Organizing department; null/blank means open to all departments. */
+    @Column(length = 100)
+    private String department;
+
+    /** End time of the event (eventTime is the start time). */
+    @JsonFormat(pattern = "HH:mm")
+    private LocalTime endTime;
+
+    /** Last day on which students can register (inclusive); null means until the event starts. */
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate registrationDeadline;
+
     /** The organizer who owns the event (null for legacy events, which only admins can manage). */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizer_id")
@@ -210,6 +222,13 @@ public class Event {
     public void setParticipants(List<Participant> participants) {
         this.participants = participants;
     }
+
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+    public LocalTime getEndTime() { return endTime; }
+    public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
+    public LocalDate getRegistrationDeadline() { return registrationDeadline; }
+    public void setRegistrationDeadline(LocalDate registrationDeadline) { this.registrationDeadline = registrationDeadline; }
 
     public Integer getCapacity() {
         return capacity;

@@ -4,6 +4,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -96,14 +97,14 @@ class SecurityApiTest extends TestSupport {
 
     @Test
     void ticketAndQrAreOnlyAvailableToTheirOwner() throws Exception {
-        AppUser organizer = newUser("Olivia Organizer", Role.ORGANIZER);
+        AppUser org = newUser("Olivia Organizer", Role.ORGANIZER);
         AppUser p = newUser("Pat Participant", Role.PARTICIPANT);
         AppUser stranger = newUser("Sam Stranger", Role.PARTICIPANT);
-        Event e = newEvent(organizer, 5);
+        Event e = newEvent(org, 5);
         Long regId = registrations.register(e.getId(), p.getId()).id();
 
         mvc.perform(get("/api/registrations/" + regId + "/qr.png").with(user(asPrincipal(p)))).andExpect(status().isOk())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().contentType(MediaType.IMAGE_PNG));
+                .andExpect(content().contentType(MediaType.IMAGE_PNG));
         mvc.perform(get("/api/registrations/" + regId + "/ticket.pdf").with(user(asPrincipal(p)))).andExpect(status().isOk());
         mvc.perform(get("/api/registrations/" + regId + "/qr.png").with(user(asPrincipal(stranger)))).andExpect(status().isNotFound());
         mvc.perform(get("/api/registrations/" + regId + "/ticket.pdf").with(user(asPrincipal(stranger)))).andExpect(status().isNotFound());
@@ -124,10 +125,10 @@ class SecurityApiTest extends TestSupport {
     void selfSignUpAlwaysCreatesAParticipant() throws Exception {
         String email = "newbie." + System.nanoTime() + "@test.local";
         mvc.perform(post("/api/auth/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Newbie\",\"email\":\"" + email + "\",\"password\":\"LongEnough1\",\"role\":\"ADMIN\"}"))
+                .content("{\"name\":\"Newbie\",\"email\":\"" + email + "\",\"password\":\"LongEnough1\",\"role\":\"ADMIN\",\"usn\":\"1AB23CS001\",\"department\":\"Computer Science & Engineering\",\"yearOfStudy\":2}"))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.role").value("PARTICIPANT"));
         mvc.perform(post("/api/auth/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Newbie\",\"email\":\"" + email + "\",\"password\":\"LongEnough1\"}"))
+                .content("{\"name\":\"Newbie\",\"email\":\"" + email + "\",\"password\":\"LongEnough1\",\"usn\":\"1AB23CS002\",\"department\":\"Computer Science & Engineering\",\"yearOfStudy\":2}"))
                 .andExpect(status().isConflict());
         mvc.perform(post("/api/auth/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"X\",\"email\":\"bad\",\"password\":\"short\"}"))

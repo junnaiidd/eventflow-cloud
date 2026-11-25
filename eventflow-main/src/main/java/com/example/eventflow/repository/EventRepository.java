@@ -51,6 +51,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     Long countByStatus(String status);
 
+    long countByStatusAndEventDateGreaterThanEqual(String status, LocalDate date);
+
     List<Event> findByNameContainingIgnoreCase(String name);
 
     @Query("SELECT e FROM Event e WHERE " +

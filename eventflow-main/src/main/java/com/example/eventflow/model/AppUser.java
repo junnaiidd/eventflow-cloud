@@ -18,7 +18,9 @@ import jakarta.persistence.UniqueConstraint;
  * unrelated and unchanged; this entity represents people who can sign in.
  */
 @Entity
-@Table(name = "app_users", uniqueConstraints = @UniqueConstraint(name = "uk_app_users_email", columnNames = "email"))
+@Table(name = "app_users", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_app_users_email", columnNames = "email"),
+        @UniqueConstraint(name = "uk_app_users_usn", columnNames = "usn") })
 public class AppUser {
 
     @Id
@@ -39,6 +41,19 @@ public class AppUser {
     private Role role;
 
     private Instant createdAt;
+
+    // ---- Student profile (all optional columns, so existing accounts stay valid) ----
+    /** University Seat Number / registration number, upper-case, unique when set. */
+    @Column(length = 20)
+    private String usn;
+
+    @Column(length = 100)
+    private String department;
+
+    private Integer yearOfStudy;
+
+    /** null is treated as active so accounts created before this column existed keep working. */
+    private Boolean active;
 
     @PrePersist
     void onCreate() {
@@ -67,6 +82,18 @@ public class AppUser {
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
+    public String getUsn() { return usn; }
+    public void setUsn(String usn) { this.usn = usn; }
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+    public Integer getYearOfStudy() { return yearOfStudy; }
+    public void setYearOfStudy(Integer yearOfStudy) { this.yearOfStudy = yearOfStudy; }
+    public Boolean getActive() { return active; }
+    public void setActive(Boolean active) { this.active = active; }
+    public boolean isActive() { return active == null || active; }
+    public boolean hasCompleteStudentProfile() {
+        return usn != null && !usn.isBlank() && department != null && !department.isBlank() && yearOfStudy != null;
+    }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }

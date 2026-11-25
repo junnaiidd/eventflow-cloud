@@ -57,7 +57,7 @@ public class SecurityConfig {
             .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin())) // needed by the local H2 console only
             .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                    .requestMatchers("/api/auth/login", "/api/auth/register", "/api/meta").permitAll()
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")
                     .requestMatchers("/api/analytics/**", "/api/checkin/**", "/api/events/analytics")
                         .hasAnyRole("ORGANIZER", "ADMIN")

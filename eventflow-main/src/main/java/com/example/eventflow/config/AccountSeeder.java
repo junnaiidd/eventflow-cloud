@@ -54,16 +54,23 @@ public class AccountSeeder implements CommandLineRunner {
         if (demoAccounts) {
             createIfMissing("Demo Admin", DEMO_ADMIN, DEMO_PASSWORD_ADMIN, Role.ADMIN);
             createIfMissing("Demo Organizer", DEMO_ORGANIZER, DEMO_PASSWORD_ORGANIZER, Role.ORGANIZER);
-            createIfMissing("Aarav Sharma", "aarav@eventflow.local", DEMO_PASSWORD_PARTICIPANT, Role.PARTICIPANT);
-            createIfMissing("Diya Patel", "diya@eventflow.local", DEMO_PASSWORD_PARTICIPANT, Role.PARTICIPANT);
-            createIfMissing("Rohan Mehta", "rohan@eventflow.local", DEMO_PASSWORD_PARTICIPANT, Role.PARTICIPANT);
-            createIfMissing("Isha Nair", "isha@eventflow.local", DEMO_PASSWORD_PARTICIPANT, Role.PARTICIPANT);
-            createIfMissing("Kabir Singh", "kabir@eventflow.local", DEMO_PASSWORD_PARTICIPANT, Role.PARTICIPANT);
-            createIfMissing("Meera Iyer", "meera@eventflow.local", DEMO_PASSWORD_PARTICIPANT, Role.PARTICIPANT);
+            createStudent("Aarav Sharma", "aarav", "1XX22CS001", "Computer Science & Engineering", 3);
+            createStudent("Diya Patel", "diya", "1XX22IS014", "Information Science & Engineering", 3);
+            createStudent("Rohan Mehta", "rohan", "1XX23CS047", "Computer Science & Engineering", 2);
+            createStudent("Isha Nair", "isha", "1XX23AD009", "AI & Data Science", 2);
+            createStudent("Kabir Singh", "kabir", "1XX24ME021", "Mechanical Engineering", 1);
+            createStudent("Meera Iyer", "meera", "1XX24EC033", "Electronics & Communication", 1);
             log.info("Demo accounts ready (local development only)");
         }
         if (!adminEmail.isBlank() && !adminPassword.isBlank()) {
             createIfMissing("Administrator", adminEmail, adminPassword, Role.ADMIN);
+        }
+    }
+
+    private void createStudent(String name, String emailPrefix, String usn, String department, int year) {
+        String email = emailPrefix + "@eventflow.local";
+        if (!users.existsByEmail(email)) {
+            userService.create(name, email, DEMO_PASSWORD_PARTICIPANT, Role.PARTICIPANT, usn, department, year);
         }
     }
 

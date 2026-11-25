@@ -5,6 +5,7 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -14,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -51,7 +53,9 @@ public class AuthController {
             Authentication auth = authenticationManager.authenticate(UsernamePasswordAuthenticationToken
                     .unauthenticated(UserService.normalizeEmail(body.email()), body.password()));
             startSession(auth, request, response);
-            return ResponseEntity.ok(toUser((AppUserDetails) auth.getPrincipal()));
+            return ResponseEntity.ok(userService.get(((AppUserDetails) auth.getPrincipal()).getId()));
+        } catch (DisabledException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "This account has been deactivated. Contact the administrator."));
         } catch (AuthenticationException e) {
             // Same message for unknown e-mail and wrong password, so accounts cannot be enumerated.
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Incorrect email or password"));
@@ -61,7 +65,9 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<UserDTO> register(@Valid @RequestBody AuthRequests.Register body, HttpServletRequest request,
             HttpServletResponse response) {
-        UserDTO created = userService.create(body.name(), body.email(), body.password(), Role.PARTICIPANT);
+        // Self sign-up always creates a student (internal role PARTICIPANT) with a complete profile.
+        UserDTO created = userService.create(body.name(), body.email(), body.password(), Role.PARTICIPANT,
+                body.usn(), body.department(), body.yearOfStudy());
         Authentication auth = authenticationManager.authenticate(
                 UsernamePasswordAuthenticationToken.unauthenticated(created.email(), body.password()));
         startSession(auth, request, response);
@@ -73,7 +79,12 @@ public class AuthController {
         if (me == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        return ResponseEntity.ok(toUser(me));
+        return ResponseEntity.ok(userService.get(me.getId()));
+    }
+
+    @PutMapping("/profile")
+    public UserDTO updateProfile(@Valid @RequestBody AuthRequests.Profile body, @AuthenticationPrincipal AppUserDetails me) {
+        return userService.updateProfile(me.getId(), body.name(), body.usn(), body.department(), body.yearOfStudy());
     }
 
     @PostMapping("/logout")
@@ -96,7 +107,4 @@ public class AuthController {
         contextRepository.saveContext(context, request, response);
     }
 
-    private UserDTO toUser(AppUserDetails d) {
-        return new UserDTO(d.getId(), d.getName(), d.getEmail(), d.getRole(), null);
-    }
 }

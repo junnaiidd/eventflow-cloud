@@ -29,5 +29,8 @@ public record RegistrationDTO(
         Instant checkedInAt,
         boolean checkedIn,
         Long certificateId,
-        String certificateCode) {
+        String certificateCode,
+        String usn,
+        String department,
+        Integer yearOfStudy) {
 }

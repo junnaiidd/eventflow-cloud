@@ -20,6 +20,7 @@ public class AppUserDetails implements UserDetails {
     private final String email;
     private final String passwordHash;
     private final Role role;
+    private final boolean active;
 
     public AppUserDetails(AppUser user) {
         this.id = user.getId();
@@ -27,6 +28,7 @@ public class AppUserDetails implements UserDetails {
         this.email = user.getEmail();
         this.passwordHash = user.getPasswordHash();
         this.role = user.getRole();
+        this.active = user.isActive();
     }
 
     public Long getId() { return id; }
@@ -47,5 +49,5 @@ public class AppUserDetails implements UserDetails {
     @Override public boolean isAccountNonExpired() { return true; }
     @Override public boolean isAccountNonLocked() { return true; }
     @Override public boolean isCredentialsNonExpired() { return true; }
-    @Override public boolean isEnabled() { return true; }
+    @Override public boolean isEnabled() { return active; }
 }

@@ -17,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.eventflow.dto.AnalyticsDTO;
 import com.example.eventflow.dto.EventDTO;
+import com.example.eventflow.exception.ApiException;
+import com.example.eventflow.model.Role;
+import com.example.eventflow.security.AppUserDetails;
 import com.example.eventflow.dto.ParticipantDTO;
 import com.example.eventflow.model.AppUser;
 import com.example.eventflow.model.Event;
@@ -43,16 +46,34 @@ public class EventService {
     private final CertificateRepository certificateRepository;
     private final RegistrationService registrationService;
     private final FileStorageService storage;
+    private final CollegeCatalog catalog;
+
+    public static final String PENDING = "Pending Approval";
+    public static final String REJECTED = "Rejected";
+    public static final String PUBLISHED = "Upcoming";
 
     public EventService(EventRepository eventRepository, AppUserRepository userRepository,
             RegistrationRepository registrationRepository, CertificateRepository certificateRepository,
-            RegistrationService registrationService, FileStorageService storage) {
+            RegistrationService registrationService, FileStorageService storage, CollegeCatalog catalog) {
         this.eventRepository = eventRepository;
         this.userRepository = userRepository;
         this.registrationRepository = registrationRepository;
         this.certificateRepository = certificateRepository;
         this.registrationService = registrationService;
         this.storage = storage;
+        this.catalog = catalog;
+    }
+
+    /** Students only see approved events; organizers also see their own pending/rejected ones; admins see all. */
+    public static boolean isVisibleTo(EventDTO e, AppUserDetails actor) {
+        boolean unapproved = PENDING.equals(e.getStatus()) || REJECTED.equals(e.getStatus());
+        if (!unapproved) {
+            return true;
+        }
+        if (actor == null) {
+            return false;
+        }
+        return actor.isAdmin() || (actor.getRole() == Role.ORGANIZER && actor.getId().equals(e.getOrganizerId()));
     }
 
     public List<EventDTO> getAllEvents() {
@@ -74,15 +95,23 @@ public class EventService {
         return createEvent(eventDTO, null);
     }
 
-    /** Creates an event owned by the given organizer (null = no owner, admin-managed). */
+    /**
+     * Creates an event owned by the actor. Events created by an organizer start as "Pending Approval" and
+     * need an administrator's approval before students can see or register for them; admin-created
+     * events are published directly.
+     */
     @SuppressWarnings("null")
-    public EventDTO createEvent(@NonNull EventDTO eventDTO, Long organizerId) {
+    public EventDTO createEvent(@NonNull EventDTO eventDTO, AppUserDetails actor) {
         log.info("Creating new event: {}", eventDTO.getName());
+        validateCollegeFields(eventDTO, null);
 
         Event event = convertToEntity(eventDTO);
-        if (organizerId != null) {
-            AppUser organizer = userRepository.findById(organizerId).orElse(null);
+        if (actor != null) {
+            AppUser organizer = userRepository.findById(actor.getId()).orElse(null);
             event.setOrganizer(organizer);
+            if (actor.getRole() == Role.ORGANIZER) {
+                event.setStatus(PENDING);
+            }
         }
 
         if (event.getCreatedAt() == null) {
@@ -105,12 +134,26 @@ public class EventService {
     }
 
     public EventDTO updateEvent(@NonNull Long id, @NonNull EventDTO eventDTO) {
+        return updateEvent(id, eventDTO, null);
+    }
+
+    public EventDTO updateEvent(@NonNull Long id, @NonNull EventDTO eventDTO, AppUserDetails actor) {
         log.info("Updating event with ID: {}", id);
 
         Event existingEvent = eventRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Event not found with ID: " + id));
 
+        validateCollegeFields(eventDTO, existingEvent);
+        String previousStatus = existingEvent.getStatus();
         updateEventFields(existingEvent, eventDTO);
+        if (actor != null && actor.getRole() == Role.ORGANIZER) {
+            // Organizers cannot approve their own events: an unapproved event stays (or goes back to) pending.
+            if (PENDING.equals(previousStatus) || REJECTED.equals(previousStatus) || PENDING.equals(eventDTO.getStatus())) {
+                existingEvent.setStatus(PENDING);
+            } else if (REJECTED.equals(eventDTO.getStatus())) {
+                existingEvent.setStatus(previousStatus);
+            }
+        }
         existingEvent.setUpdatedAt(LocalDate.now());
 
         if (eventDTO.getParticipants() != null) {
@@ -133,6 +176,48 @@ public class EventService {
         registrationService.fillAvailableSeats(id);
 
         return convertToDTO(updatedEvent);
+    }
+
+    /** Admin approval: a pending event becomes published (status "Upcoming"). */
+    public EventDTO approve(Long id) {
+        return decide(id, PUBLISHED);
+    }
+
+    /** Admin rejection: the organizer can edit the event, which sends it back for approval. */
+    public EventDTO reject(Long id) {
+        return decide(id, REJECTED);
+    }
+
+    private EventDTO decide(Long id, String newStatus) {
+        Event event = eventRepository.findById(id).orElseThrow(() -> ApiException.notFound("Event not found"));
+        if (!PENDING.equals(event.getStatus())) {
+            throw ApiException.conflict("Only events that are pending approval can be approved or rejected");
+        }
+        event.setStatus(newStatus);
+        return convertToDTO(eventRepository.save(event));
+    }
+
+    /** Server-side checks for the college fields. Legacy values already stored on the event stay valid. */
+    private void validateCollegeFields(EventDTO dto, Event existing) {
+        String category = dto.getType();
+        boolean unchangedCategory = existing != null && category != null && category.equals(existing.getType());
+        if (!unchangedCategory && !catalog.isCategory(category)) {
+            throw ApiException.badRequest("Choose an event category from the list");
+        }
+        String dept = dto.getDepartment();
+        if (dept != null && !dept.isBlank()) {
+            boolean unchangedDept = existing != null && dept.equals(existing.getDepartment());
+            if (!unchangedDept && !catalog.isDepartment(dept)) {
+                throw ApiException.badRequest("Choose a department from the list");
+            }
+        }
+        if (dto.getEventTime() != null && dto.getEndTime() != null && !dto.getEndTime().isAfter(dto.getEventTime())) {
+            throw ApiException.badRequest("End time must be after the start time");
+        }
+        if (dto.getRegistrationDeadline() != null && dto.getEventDate() != null
+                && dto.getRegistrationDeadline().isAfter(dto.getEventDate())) {
+            throw ApiException.badRequest("The registration deadline cannot be after the event date");
+        }
     }
 
     public void deleteEvent(@NonNull Long id) {
@@ -297,6 +382,9 @@ public class EventService {
 
         return EventDTO.builder()
                 .capacity(effectiveCapacity)
+                .department(event.getDepartment())
+                .endTime(event.getEndTime())
+                .registrationDeadline(event.getRegistrationDeadline())
                 .confirmedCount(confirmed)
                 .waitlistedCount(waitlisted)
                 .availableSeats(Math.max(0, effectiveCapacity - confirmed))
@@ -340,6 +428,10 @@ public class EventService {
                 .participants(new ArrayList<>())
                 .build();
 
+        event.setDepartment(dto.getDepartment() == null || dto.getDepartment().isBlank() ? null : dto.getDepartment());
+        event.setEndTime(dto.getEndTime());
+        event.setRegistrationDeadline(dto.getRegistrationDeadline());
+
         if (dto.getParticipants() != null && !dto.getParticipants().isEmpty()) {
             for (ParticipantDTO participantDTO : dto.getParticipants()) {
                 Participant participant = Participant.builder()
@@ -372,6 +464,9 @@ public class EventService {
         if (dto.getCapacity() != null) {
             event.setCapacity(dto.getCapacity());
         }
+        event.setDepartment(dto.getDepartment() == null || dto.getDepartment().isBlank() ? null : dto.getDepartment());
+        event.setEndTime(dto.getEndTime());
+        event.setRegistrationDeadline(dto.getRegistrationDeadline());
     }
 
     private ParticipantDTO convertParticipantToDTO(Participant participant) {

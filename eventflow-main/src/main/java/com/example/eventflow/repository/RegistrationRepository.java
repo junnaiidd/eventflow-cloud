@@ -23,6 +23,8 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
 
     boolean existsByTicketId(String ticketId);
 
+    long countByStatus(RegistrationStatus status);
+
     long countByEventIdAndStatus(Long eventId, RegistrationStatus status);
 
     @Query("select count(r) from Registration r where r.event.id = :eventId and r.checkedInAt is not null")

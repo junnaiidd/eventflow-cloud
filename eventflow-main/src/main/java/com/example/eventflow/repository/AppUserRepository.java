@@ -13,4 +13,10 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     Optional<AppUser> findByEmail(String email);
 
     boolean existsByEmail(String email);
+
+    boolean existsByUsnAndIdNot(String usn, Long id);
+
+    boolean existsByUsn(String usn);
+
+    long countByRole(com.example.eventflow.model.Role role);
 }

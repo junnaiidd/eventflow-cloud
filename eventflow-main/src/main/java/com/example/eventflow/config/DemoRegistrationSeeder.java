@@ -70,15 +70,15 @@ public class DemoRegistrationSeeder implements CommandLineRunner {
             checkInService.checkIn(lab.getId(), labRegs.get(0).ticketId(), organizerDetails);
             checkInService.checkIn(lab.getId(), labRegs.get(1).ticketId(), organizerDetails);
         }
-        Event conference = find("Annual Tech Conference 2025");
+        Event conference = find("TechNova 2026 - Technical Symposium");
         if (conference != null) {
             register(conference, PARTICIPANTS.subList(0, 4), 6);
         }
-        Event workshop = find("Corporate Leadership Workshop");
+        Event workshop = find("Python Workshop for Beginners");
         if (workshop != null) {
             register(workshop, PARTICIPANTS.subList(1, 4), 3);
         }
-        Event launch = find("Product Launch Event");
+        Event launch = find("HackSprint - 12 Hour Hackathon");
         if (launch != null) {
             register(launch, PARTICIPANTS.subList(2, 4), 2);
         }

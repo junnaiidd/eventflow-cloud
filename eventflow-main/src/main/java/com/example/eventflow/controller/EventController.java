@@ -52,20 +52,18 @@ public class EventController {
     }
 
     @GetMapping
-    public ResponseEntity<List<EventDTO>> getAllEvents() {
+    public ResponseEntity<List<EventDTO>> getAllEvents(@AuthenticationPrincipal AppUserDetails me) {
         log.info("GET /api/events - Fetch all events");
-        List<EventDTO> events = eventService.getAllEvents();
+        List<EventDTO> events = eventService.getAllEvents().stream().filter(e -> EventService.isVisibleTo(e, me)).toList();
         return ResponseEntity.ok(events);
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<EventDTO>> searchEvents(@RequestParam(required = false, defaultValue = "") String q) {
+    public ResponseEntity<List<EventDTO>> searchEvents(@RequestParam(required = false, defaultValue = "") String q,
+            @AuthenticationPrincipal AppUserDetails me) {
         log.info("GET /api/events/search?q={} - Search events", q);
-        if (q == null || q.trim().isEmpty()) {
-            log.debug("Empty search query, returning all events");
-            return ResponseEntity.ok(eventService.getAllEvents());
-        }
-        List<EventDTO> events = eventService.searchEvents(q.trim());
+        List<EventDTO> events = eventService.searchEvents(q == null ? "" : q.trim()).stream()
+                .filter(e -> EventService.isVisibleTo(e, me)).toList();
         log.debug("Found {} events matching '{}'", events.size(), q);
         return ResponseEntity.ok(events);
     }
@@ -79,10 +77,13 @@ public class EventController {
 
     @GetMapping("/{id}")
     @SuppressWarnings("null")
-    public ResponseEntity<EventDTO> getEventById(@PathVariable Long id) {
+    public ResponseEntity<EventDTO> getEventById(@PathVariable Long id, @AuthenticationPrincipal AppUserDetails me) {
         log.info("GET /api/events/{} - Fetch event by ID", id);
         try {
             EventDTO event = eventService.getEventById(id);
+            if (!EventService.isVisibleTo(event, me)) {
+                return ResponseEntity.notFound().build();
+            }
             return ResponseEntity.ok(event);
         } catch (RuntimeException e) {
             log.error("Event not found: {}", id);
@@ -96,9 +97,11 @@ public class EventController {
         log.info("POST /api/events - Create new event: {}", eventDTO.getName());
         log.debug("Event DTO received: {}", eventDTO);
         try {
-            EventDTO createdEvent = eventService.createEvent(eventDTO, me.getId());
+            EventDTO createdEvent = eventService.createEvent(eventDTO, me);
             log.info("Event created successfully with ID: {}", createdEvent.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(createdEvent);
+        } catch (ApiException e) {
+            throw e; // validation problems are reported with their own status and message
         } catch (Exception e) {
             log.error("Error creating event", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -115,9 +118,11 @@ public class EventController {
         log.debug("Event DTO received: {}", eventDTO);
         accessPolicy.requireManageable(id, me); // organizers may only edit their own events
         try {
-            EventDTO updatedEvent = eventService.updateEvent(id, eventDTO);
+            EventDTO updatedEvent = eventService.updateEvent(id, eventDTO, me);
             log.info("Event updated successfully: {}", id);
             return ResponseEntity.ok(updatedEvent);
+        } catch (ApiException e) {
+            throw e;
         } catch (RuntimeException e) {
             log.error("Error updating event: {}", id, e);
             return ResponseEntity.notFound().build();

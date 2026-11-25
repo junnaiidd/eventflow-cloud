@@ -1,0 +1,33 @@
+# Maven
+target/
+**/target/
+*.class
+**/*.class
+
+# AWS / SSH Keys and Secrets (Critical)
+*.pem
+*.key
+*.env
+**/*.env
+
+# Log files
+*.log
+**/*.log
+app-live.log
+app.log
+
+# Uploaded posters / certificates (local storage)
+uploads/
+**/uploads/
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db

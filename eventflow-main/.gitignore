@@ -1,0 +1,25 @@
+# Maven
+target/
+*.class
+
+# Log files
+*.log
+app-live.log
+app.log
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Uploaded posters / certificates (local storage) and environment files
+uploads/
+.env
+*.env

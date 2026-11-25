@@ -1,0 +1,2601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EventFlow - Event Management System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-light: #f8fafc;
+            --bg-dark: #0f172a;
+            --card-light: #ffffff;
+            --card-dark: #1e293b;
+            --text-light: #1e293b;
+            --text-dark: #f1f5f9;
+            --border-light: #e2e8f0;
+            --border-dark: #334155;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-light);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        body.dark-mode {
+            background: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: var(--card-light);
+            border-right: 1px solid var(--border-light);
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        body.dark-mode .sidebar {
+            background: var(--card-dark);
+            border-right-color: var(--border-dark);
+        }
+
+        .sidebar.collapsed {
+            width: 80px;
+        }
+
+        .logo {
+            padding: 0 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .sidebar.collapsed .logo span {
+            display: none;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 1rem;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.875rem 1rem;
+            color: inherit;
+            text-decoration: none;
+            border-radius: 0.75rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .nav-link:hover {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .nav-link i {
+            font-size: 1.25rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sidebar.collapsed .nav-link span {
+            display: none;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .sidebar.collapsed ~ .main-content {
+            margin-left: 80px;
+        }
+
+        .header {
+            background: var(--card-light);
+            border-bottom: 1px solid var(--border-light);
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark-mode .header {
+            background: var(--card-dark);
+            border-bottom-color: var(--border-dark);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: inherit;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            transition: background 0.2s ease;
+        }
+
+        .menu-toggle:hover {
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            background: var(--bg-light);
+            border: 1px solid var(--border-light);
+            border-radius: 0.75rem;
+            padding: 0.625rem 1rem;
+            width: 300px;
+        }
+
+        body.dark-mode .search-bar {
+            background: var(--bg-dark);
+            border-color: var(--border-dark);
+        }
+
+        .search-bar input {
+            border: none;
+            background: none;
+            outline: none;
+            flex: 1;
+            color: inherit;
+            margin-left: 0.5rem;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .theme-toggle, .notification-btn {
+            background: var(--bg-light);
+            border: 1px solid var(--border-light);
+            width: 40px;
+            height: 40px;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1.125rem;
+            color: inherit;
+        }
+
+        body.dark-mode .theme-toggle,
+        body.dark-mode .notification-btn {
+            background: var(--card-dark);
+            border-color: var(--border-dark);
+        }
+
+        .theme-toggle:hover, .notification-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-subtitle {
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-light);
+            border: 1px solid var(--border-light);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body.dark-mode .stat-card {
+            background: var(--card-dark);
+            border-color: var(--border-dark);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .stat-icon.primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); }
+        .stat-icon.success { background: linear-gradient(135deg, #10b981, #059669); }
+        .stat-icon.warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .stat-icon.danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .card {
+            background: var(--card-light);
+            border: 1px solid var(--border-light);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        body.dark-mode .card {
+            background: var(--card-dark);
+            border-color: var(--border-dark);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        body.dark-mode .card-header {
+            border-bottom-color: var(--border-dark);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-light);
+            border-radius: 0.75rem;
+            font-size: 0.875rem;
+            background: var(--bg-light);
+            color: inherit;
+            transition: all 0.2s ease;
+        }
+
+        body.dark-mode .form-input,
+        body.dark-mode .form-select,
+        body.dark-mode .form-textarea {
+            background: var(--bg-dark);
+            border-color: var(--border-dark);
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-light);
+        }
+
+        body.dark-mode .table-container {
+            border-color: var(--border-dark);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--bg-light);
+        }
+
+        body.dark-mode thead {
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+        }
+
+        td {
+            padding: 1rem;
+            border-top: 1px solid var(--border-light);
+        }
+
+        body.dark-mode td {
+            border-top-color: var(--border-dark);
+        }
+
+        tbody tr {
+            transition: background 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .badge-primary { background: rgba(99, 102, 241, 0.15); color: var(--primary); }
+        .badge-success { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+        .badge-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+        .badge-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: var(--card-light);
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.3s ease;
+        }
+
+        body.dark-mode .modal-content {
+            background: var(--card-dark);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #64748b;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .close-modal:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .calendar-month {
+            font-size: 1.5rem;
+            font-weight: 700;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+        }
+
+        .calendar-day-header {
+            text-align: center;
+            font-weight: 600;
+            padding: 1rem;
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            border: 1px solid var(--border-light);
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            min-height: 80px;
+        }
+
+        body.dark-mode .calendar-day {
+            border-color: var(--border-dark);
+        }
+
+        .calendar-day:hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: var(--primary);
+        }
+
+        .calendar-day.today {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: var(--primary);
+            border-width: 2px;
+        }
+
+        .calendar-day.other-month {
+            opacity: 0.3;
+        }
+
+        .calendar-day-number {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .calendar-events {
+            font-size: 0.7rem;
+        }
+
+        .calendar-event-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 2px;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            border: 4px solid var(--border-light);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .event-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .detail-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+        }
+
+        .detail-value {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .participant-list {
+            list-style: none;
+        }
+
+        .participant-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            background: var(--bg-light);
+        }
+
+        body.dark-mode .participant-item {
+            background: var(--bg-dark);
+        }
+
+        .participant-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .search-bar {
+                display: none;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .event-detail-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="css/eventflow-extensions.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <div class="logo">
+                <i class="fas fa-calendar-check"></i>
+                <span>EventFlow</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link active" data-page="dashboard">
+                        <i class="fas fa-home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-page="events">
+                        <i class="fas fa-list"></i>
+                        <span>All Events</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-roles="ORGANIZER,ADMIN">
+                    <a class="nav-link" data-page="create">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Create Event</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-page="calendar">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Calendar</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-roles="ORGANIZER,ADMIN">
+                    <a class="nav-link" data-page="analytics">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Analytics</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-page="tickets">
+                        <i class="fas fa-ticket"></i>
+                        <span>My Tickets</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-roles="ORGANIZER,ADMIN">
+                    <a class="nav-link" data-page="checkin">
+                        <i class="fas fa-qrcode"></i>
+                        <span>Check-in</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-page="certificates">
+                        <i class="fas fa-certificate"></i>
+                        <span>Certificates</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-roles="ADMIN">
+                    <a class="nav-link" data-page="users">
+                        <i class="fas fa-users-gear"></i>
+                        <span>Users</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="ef-sidebar-user">
+                <div class="ef-user-row">
+                    <div class="ef-avatar" id="efUserAvatar">?</div>
+                    <div class="ef-user-info">
+                        <div class="ef-user-name" id="efUserName"></div>
+                        <div class="ef-user-role" id="efUserRole"></div>
+                    </div>
+                </div>
+                <button class="btn btn-outline btn-sm ef-signout" onclick="EF.logout()">
+                    <i class="fas fa-right-from-bracket"></i> <span>Sign out</span>
+                </button>
+            </div>
+        </nav>
+
+        <div class="main-content">
+            <header class="header">
+                <div class="header-left">
+                    <button class="menu-toggle" id="menuToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search events..." id="searchInput">
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="notification-btn">
+                        <i class="fas fa-bell"></i>
+                    </button>
+                    <button class="theme-toggle" id="themeToggle">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="page active" id="dashboard">
+                    <div class="page-header">
+                        <h1 class="page-title">Dashboard</h1>
+                        <p class="page-subtitle">Welcome back! Here's what's happening with your events.</p>
+                    </div>
+
+                    <div class="stats-grid" id="dashboardStats"></div>
+                    <div class="stats-grid" id="dashboardRegStats"></div>
+                    <div id="participantDashboard" class="hidden"></div>
+
+                    <div class="card" id="orgUpcomingCard">
+                        <div class="card-header">
+                            <h3 class="card-title">Upcoming Events</h3>
+                            <button class="btn btn-outline btn-sm" onclick="showPage('events')">View All</button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Event Name</th>
+                                        <th>Date</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="upcomingEventsTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="page" id="events">
+                    <div class="page-header">
+                        <h1 class="page-title">All Events</h1>
+                        <p class="page-subtitle">Manage and track all your events in one place.</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Event List</h3>
+                            <button class="btn btn-primary" data-roles="ORGANIZER,ADMIN" onclick="showPage('create')">
+                                <i class="fas fa-plus"></i> Create Event
+                            </button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Event Name</th>
+                                        <th>Date</th>
+                                        <th>Location</th>
+                                        <th>Type</th>
+                                        <th>Budget</th>
+                                        <th>Seats</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="allEventsTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="page" id="create">
+                    <div class="page-header">
+                        <h1 class="page-title">Create New Event</h1>
+                        <p class="page-subtitle">Fill in the details to create a new event.</p>
+                    </div>
+
+                    <div class="card">
+                        <form id="createEventForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Event Name *</label>
+                                    <input type="text" class="form-input" name="name" required placeholder="e.g., Annual Tech Conference">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Event Type *</label>
+                                    <select class="form-select" name="type" required>
+                                        <option value="">Select type...</option>
+                                        <option value="Conference">Conference</option>
+                                        <option value="Wedding">Wedding</option>
+                                        <option value="Concert">Concert</option>
+                                        <option value="Workshop">Workshop</option>
+                                        <option value="Corporate">Corporate Event</option>
+                                        <option value="Birthday">Birthday Party</option>
+                                        <option value="Seminar">Seminar</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Event Date *</label>
+                                    <input type="date" class="form-input" name="eventDate" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Event Time *</label>
+                                    <input type="time" class="form-input" name="eventTime" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Location *</label>
+                                    <input type="text" class="form-input" name="location" required placeholder="e.g., Grand Hotel Ballroom">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Budget (₹) *</label>
+                                    <input type="number" class="form-input" name="budget" required placeholder="e.g., 5000000">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Expected Attendees</label>
+                                    <input type="number" class="form-input" name="attendees" placeholder="e.g., 200">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Capacity (max registrations)</label>
+                                    <input type="number" min="1" max="1000000" class="form-input" name="capacity" placeholder="Defaults to expected attendees">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Contact Email</label>
+                                    <input type="email" class="form-input" name="contactEmail" placeholder="e.g., contact@event.com">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Poster / banner (PNG, JPEG or WebP, max 2 MB)</label>
+                                    <input type="file" class="form-input" name="poster" accept="image/png,image/jpeg,image/webp">
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label class="form-label">Description</label>
+                                    <textarea class="form-textarea" name="description" placeholder="Brief description of the event..."></textarea>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Create Event
+                                </button>
+                                <button type="button" class="btn btn-outline" onclick="document.getElementById('createEventForm').reset()">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="page" id="calendar">
+                    <div class="page-header">
+                        <h1 class="page-title">Event Calendar</h1>
+                        <p class="page-subtitle">Visual overview of all scheduled events.</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="calendar-header">
+                            <div class="calendar-nav">
+                                <button class="btn btn-outline btn-sm" onclick="previousMonth()">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <span class="calendar-month" id="calendarMonth">Loading...</span>
+                                <button class="btn btn-outline btn-sm" onclick="nextMonth()">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="goToToday()">
+                                <i class="fas fa-calendar-day"></i> Today
+                            </button>
+                        </div>
+
+                        <div class="calendar-grid" id="calendarGrid"></div>
+                    </div>
+                </div>
+
+                <div class="page" id="analytics">
+                    <div class="page-header">
+                        <h1 class="page-title">Analytics</h1>
+                        <p class="page-subtitle">Insights and performance metrics for your events.</p>
+                    </div>
+
+                    <h3 class="ef-section-title">Registrations &amp; attendance</h3>
+                    <div id="insightsContent"></div>
+
+                    <h3 class="ef-section-title" style="margin-top:2rem">Budget &amp; event mix</h3>
+                    <div class="stats-grid" id="analyticsStats"></div>
+
+                    <div class="chart-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Events by Type</h3>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="eventsByTypeChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Budget by Type</h3>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="budgetByTypeChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Monthly Events</h3>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="monthlyEventsChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Monthly Budget</h3>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="monthlyBudgetChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="page" id="tickets">
+                    <div class="page-header">
+                        <h1 class="page-title">My Tickets</h1>
+                        <p class="page-subtitle">Your registrations, QR tickets and waitlist positions.</p>
+                    </div>
+                    <div id="ticketsContent"></div>
+                </div>
+
+                <div class="page" id="checkin">
+                    <div class="page-header">
+                        <h1 class="page-title">Check-in</h1>
+                        <p class="page-subtitle">Scan participant QR tickets and track attendance live.</p>
+                    </div>
+                    <div id="checkinContent"></div>
+                </div>
+
+                <div class="page" id="certificates">
+                    <div class="page-header">
+                        <h1 class="page-title">Certificates</h1>
+                        <p class="page-subtitle">Participation certificates are issued automatically after check-in.</p>
+                    </div>
+                    <div id="certificatesContent"></div>
+                </div>
+
+                <div class="page" id="users">
+                    <div class="page-header">
+                        <h1 class="page-title">Users</h1>
+                        <p class="page-subtitle">Create organizer and admin accounts.</p>
+                    </div>
+                    <div id="usersContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ef-auth hidden" id="authScreen">
+        <div class="ef-auth-card">
+            <div class="ef-auth-brand"><i class="fas fa-calendar-check"></i> EventFlow</div>
+            <p class="ef-auth-sub">Sign in to manage events, tickets and attendance.</p>
+            <div class="ef-tabs" role="tablist">
+                <button class="ef-tab active" id="tabLogin" type="button" onclick="EF.authTab('login')">Sign in</button>
+                <button class="ef-tab" id="tabSignup" type="button" onclick="EF.authTab('signup')">Create account</button>
+            </div>
+            <div class="ef-form-error" id="authError" role="alert"></div>
+            <form id="loginForm">
+                <div class="form-group"><label class="form-label" for="loginEmail">Email</label><input class="form-input" id="loginEmail" name="email" type="email" required autocomplete="username"></div>
+                <div class="form-group"><label class="form-label" for="loginPassword">Password</label><input class="form-input" id="loginPassword" name="password" type="password" required autocomplete="current-password"></div>
+                <button class="btn btn-primary" type="submit">Sign in</button>
+            </form>
+            <form id="signupForm" class="hidden">
+                <div class="form-group"><label class="form-label" for="signupName">Full name</label><input class="form-input" id="signupName" name="name" required maxlength="120" autocomplete="name"></div>
+                <div class="form-group"><label class="form-label" for="signupEmail">Email</label><input class="form-input" id="signupEmail" name="email" type="email" required maxlength="190" autocomplete="username"></div>
+                <div class="form-group"><label class="form-label" for="signupPassword">Password (8+ characters)</label><input class="form-input" id="signupPassword" name="password" type="password" required minlength="8" maxlength="72" autocomplete="new-password"></div>
+                <button class="btn btn-primary" type="submit">Create participant account</button>
+            </form>
+        </div>
+    </div>
+    <div class="ef-toasts" id="efToasts" aria-live="polite"></div>
+
+    <div class="modal" id="eventDetailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Event Details</h2>
+                <button class="close-modal" onclick="closeModal('eventDetailModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="eventDetailContent"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="editEventModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Edit Event</h2>
+                <button class="close-modal" onclick="closeModal('editEventModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="editEventForm">
+                <input type="hidden" name="id" id="editEventId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Event Name</label>
+                        <input type="text" class="form-input" name="name" id="editEventName" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Event Type</label>
+                        <select class="form-select" name="type" id="editEventType" required>
+                            <option value="Conference">Conference</option>
+                            <option value="Wedding">Wedding</option>
+                            <option value="Concert">Concert</option>
+                            <option value="Workshop">Workshop</option>
+                            <option value="Corporate">Corporate Event</option>
+                            <option value="Birthday">Birthday Party</option>
+                            <option value="Seminar">Seminar</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Event Date</label>
+                        <input type="date" class="form-input" name="eventDate" id="editEventDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Event Time</label>
+                        <input type="time" class="form-input" name="eventTime" id="editEventTime">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Location</label>
+                        <input type="text" class="form-input" name="location" id="editEventLocation" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Budget (₹)</label>
+                        <input type="number" class="form-input" name="budget" id="editEventBudget" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" name="status" id="editEventStatus">
+                            <option value="Upcoming">Upcoming</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Attendees</label>
+                        <input type="number" class="form-input" name="attendees" id="editEventAttendees">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Capacity (max registrations)</label>
+                        <input type="number" min="0" max="1000000" class="form-input" name="capacity" id="editEventCapacity">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Replace poster (PNG, JPEG, WebP, max 2 MB)</label>
+                        <input type="file" class="form-input" name="poster" accept="image/png,image/jpeg,image/webp">
+                        <button type="button" class="btn btn-sm ef-btn-danger hidden" id="editRemovePoster" style="margin-top:.5rem">Remove current poster</button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                    <button type="button" class="btn btn-outline" onclick="closeModal('editEventModal')">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = '/api/events';
+        const CURRENCY_SYMBOL = '₹';
+        const USE_MOCK_DATA = false; // FIXED: Changed from true to false to use real backend
+        
+        let allEvents = [];
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+        let charts = {};
+        let useMockData = USE_MOCK_DATA;
+
+        // Mock data for when backend is not available
+        const MOCK_EVENTS = [
+            {
+                id: 1,
+                name: "Annual Tech Conference 2025",
+                eventDate: "2025-12-15",
+                eventTime: "09:00",
+                location: "Silicon Valley Convention Center",
+                type: "Conference",
+                budget: 5625000,
+                status: "Upcoming",
+                attendees: 500,
+                description: "A major technology conference featuring industry leaders and innovators.",
+                participants: [
+                    { id: 1, name: "John Doe", role: "Speaker" },
+                    { id: 2, name: "Jane Smith", role: "Organizer" }
+                ]
+            },
+            {
+                id: 2,
+                name: "Summer Music Festival",
+                eventDate: "2025-11-20",
+                eventTime: "17:00",
+                location: "Central Park Amphitheater",
+                type: "Concert",
+                budget: 9000000,
+                status: "In Progress",
+                attendees: 2000,
+                description: "An outdoor music festival featuring multiple artists.",
+                participants: []
+            },
+            {
+                id: 3,
+                name: "Corporate Leadership Workshop",
+                eventDate: "2025-12-10",
+                eventTime: "10:00",
+                location: "Downtown Business Center",
+                type: "Workshop",
+                budget: 1125000,
+                status: "Upcoming",
+                attendees: 50,
+                description: "Professional development workshop for executives.",
+                participants: []
+            },
+            {
+                id: 4,
+                name: "James & Emma Wedding",
+                eventDate: "2025-10-30",
+                eventTime: "16:00",
+                location: "Seaside Resort & Spa",
+                type: "Wedding",
+                budget: 6375000,
+                status: "Completed",
+                attendees: 200,
+                description: "Beautiful beachfront wedding ceremony.",
+                participants: []
+            },
+            {
+                id: 5,
+                name: "Product Launch Event",
+                eventDate: "2025-11-25",
+                eventTime: "14:00",
+                location: "Innovation Hub",
+                type: "Corporate",
+                budget: 3375000,
+                status: "Upcoming",
+                attendees: 150,
+                description: "Launch event for new product line.",
+                participants: []
+            },
+            {
+                id: 6,
+                name: "Charity Gala Dinner",
+                eventDate: "2025-10-15",
+                eventTime: "19:00",
+                location: "Grand Hotel Ballroom",
+                type: "Other",
+                budget: 4875000,
+                status: "Completed",
+                attendees: 300,
+                description: "Annual charity fundraising gala.",
+                participants: []
+            }
+        ];
+
+        function getMockAnalytics() {
+            const totalBudget = MOCK_EVENTS.reduce((sum, e) => sum + e.budget, 0);
+            const totalAttendees = MOCK_EVENTS.reduce((sum, e) => sum + e.attendees, 0);
+            const upcomingEvents = MOCK_EVENTS.filter(e => e.status === 'Upcoming').length;
+            const completedEvents = MOCK_EVENTS.filter(e => e.status === 'Completed').length;
+            const inProgressEvents = MOCK_EVENTS.filter(e => e.status === 'In Progress').length;
+            
+            const eventsByType = {};
+            const budgetByType = {};
+            const eventsByMonth = {};
+            const budgetByMonth = {};
+            
+            MOCK_EVENTS.forEach(e => {
+                eventsByType[e.type] = (eventsByType[e.type] || 0) + 1;
+                budgetByType[e.type] = (budgetByType[e.type] || 0) + e.budget;
+                const month = e.eventDate.substring(0, 7);
+                eventsByMonth[month] = (eventsByMonth[month] || 0) + 1;
+                budgetByMonth[month] = (budgetByMonth[month] || 0) + e.budget;
+            });
+
+            return {
+                totalBudget,
+                totalAttendees,
+                totalEvents: MOCK_EVENTS.length,
+                upcomingEvents,
+                completedEvents,
+                inProgressEvents,
+                cancelledEvents: 0,
+                averageBudget: totalBudget / MOCK_EVENTS.length,
+                averageAttendees: totalAttendees / MOCK_EVENTS.length,
+                eventsByType,
+                budgetByType,
+                eventsByMonth,
+                budgetByMonth,
+                successRate: (completedEvents / MOCK_EVENTS.length) * 100
+            };
+        }
+
+        async function fetchAllEvents() {
+            if (useMockData) {
+                console.log('Using mock data');
+                allEvents = [...MOCK_EVENTS];
+                return allEvents;
+            }
+
+            try {
+                const response = await fetch(API_BASE_URL);
+                if (!response.ok) throw new Error('API not available');
+                allEvents = await response.json();
+                return allEvents;
+            } catch (error) {
+                console.warn('Backend not available, using mock data');
+                useMockData = true;
+                allEvents = [...MOCK_EVENTS];
+                return allEvents;
+            }
+        }
+
+        async function fetchAnalytics() {
+            if (useMockData) {
+                return getMockAnalytics();
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/analytics`);
+                if (!response.ok) throw new Error('API not available');
+                return await response.json();
+            } catch (error) {
+                console.warn('Analytics API not available, using mock data');
+                useMockData = true;
+                return getMockAnalytics();
+            }
+        }
+
+        async function createEvent(eventData) {
+            if (useMockData) {
+                const newEvent = {
+                    ...eventData,
+                    id: Math.max(...allEvents.map(e => e.id), 0) + 1,
+                    participants: []
+                };
+                allEvents.push(newEvent);
+                console.log('✅ Event created (mock):', newEvent);
+                return newEvent;
+            }
+
+            try {
+                const response = await fetch(API_BASE_URL, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(eventData)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    console.error('❌ Server response:', response.status, errorData);
+                    throw new Error(`Server error ${response.status}: ${errorData || 'Failed to create event'}`);
+                }
+                
+                const createdEvent = await response.json();
+                console.log('✅ Event created:', createdEvent);
+                return createdEvent;
+            } catch (error) {
+                console.error('❌ Error creating event:', error.message);
+                throw error;
+            }
+        }
+
+
+        async function updateEvent(id, eventData) {
+            if (useMockData) {
+                const index = allEvents.findIndex(e => e.id === id);
+                if (index !== -1) {
+                    allEvents[index] = { ...allEvents[index], ...eventData };
+                    console.log('✅ Event updated (mock):', allEvents[index]);
+                    return allEvents[index];
+                }
+                throw new Error('Event not found');
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/${id}`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(eventData)
+                });
+                
+                if (response.status === 404) {
+                    throw new Error(`Event with ID ${id} not found`);
+                }
+                
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    console.error('❌ Update failed:', response.status, errorData);
+                    throw new Error(`Server error ${response.status}: ${errorData || 'Failed to update event'}`);
+                }
+                
+                const updatedEvent = await response.json();
+                console.log('✅ Event updated:', updatedEvent);
+                return updatedEvent;
+            } catch (error) {
+                console.error('❌ Error updating event:', error.message);
+                throw error;
+            }
+        }
+
+
+         async function deleteEvent(id) {
+            if (useMockData) {
+                const deleted = allEvents.find(e => e.id === id);
+                allEvents = allEvents.filter(e => e.id !== id);
+                console.log('✅ Event deleted (mock):', deleted?.name);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/${id}`, {
+                    method: 'DELETE',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.status === 204 || response.ok) {
+                    console.log('✅ Event deleted successfully');
+                    return;
+                }
+                
+                if (response.status === 404) {
+                    throw new Error(`Event with ID ${id} not found`);
+                }
+                
+                throw new Error(`Failed to delete: ${response.status}`);
+            } catch (error) {
+                console.error('❌ Error deleting event:', error.message);
+                throw error;
+            }
+        }
+
+        function formatCurrency(amount) {
+            if (!amount) return `${CURRENCY_SYMBOL}0`;
+            return `${CURRENCY_SYMBOL}${new Intl.NumberFormat('en-IN').format(Math.round(amount))}`;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            return new Date(dateString).toLocaleDateString('en-IN', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'Upcoming': 'badge-warning',
+                'In Progress': 'badge-primary',
+                'Completed': 'badge-success',
+                'Cancelled': 'badge-danger'
+            };
+            const cls = badges[status] || 'badge-primary';
+            return `<span class="badge ${cls}">${EF.esc(status)}</span>`;
+        }
+
+        function showPage(pageName) {
+            if (window.EF && EF.user && !EF.canOpen(pageName)) pageName = 'dashboard';
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            const target = document.getElementById(pageName);
+            if (target) target.classList.add('active');
+
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            const navLink = document.querySelector(`[data-page="${pageName}"]`);
+            if (navLink) navLink.classList.add('active');
+
+            if (pageName === 'dashboard') loadDashboard();
+            if (pageName === 'events') loadAllEvents();
+            if (pageName === 'calendar') loadCalendar();
+            if (pageName === 'analytics') loadAnalytics();
+            if (window.EF) EF.onPageShown(pageName);
+        }
+
+        async function loadDashboard() {
+            if (EF.isParticipant()) return EF.loadParticipantDashboard(); // participants see their own dashboard
+            const analytics = await fetchAnalytics();
+            if (!analytics) return;
+
+            const statsContainer = document.getElementById('dashboardStats');
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value">${analytics.totalEvents || 0}</div>
+                            <div class="stat-label">Total Events</div>
+                        </div>
+                        <div class="stat-icon primary">
+                            <i class="fas fa-calendar"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value">${analytics.upcomingEvents || 0}</div>
+                            <div class="stat-label">Upcoming</div>
+                        </div>
+                        <div class="stat-icon warning">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value">${analytics.completedEvents || 0}</div>
+                            <div class="stat-label">Completed</div>
+                        </div>
+                        <div class="stat-icon success">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value">${analytics.inProgressEvents || 0}</div>
+                            <div class="stat-label">In Progress</div>
+                        </div>
+                        <div class="stat-icon danger">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const events = await fetchAllEvents();
+            const upcomingEvents = events
+                .filter(e => e.status === 'Upcoming' || e.status === 'In Progress')
+                .sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate))
+                .slice(0, 5);
+
+            renderUpcomingEvents(upcomingEvents);
+            EF.afterDashboard(); // registration / attendance statistics from the database
+        }
+
+        function renderUpcomingEvents(events) {
+            const tbody = document.getElementById('upcomingEventsTable');
+            if (!tbody) return;
+
+            if (events.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">No upcoming events</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = events.map(event => `
+                <tr>
+                    <td><strong>${EF.esc(event.name)}</strong></td>
+                    <td>${formatDate(event.eventDate)}</td>
+                    <td><span class="badge badge-primary">${EF.esc(event.type)}</span></td>
+                    <td>${getStatusBadge(event.status)}</td>
+                    <td>
+                        <button class="btn btn-icon btn-sm" onclick="viewEvent(${event.id})" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadAllEvents() {
+            const events = await fetchAllEvents();
+            renderAllEvents(events);
+        }
+
+        function renderAllEvents(events) {
+            const tbody = document.getElementById('allEventsTable');
+            if (!tbody) return;
+
+            if (events.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem;">No events found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = events.map(event => `
+                <tr>
+                    <td><strong>${EF.esc(event.name)}</strong></td>
+                    <td>${formatDate(event.eventDate)}</td>
+                    <td>${EF.esc(event.location)}</td>
+                    <td><span class="badge badge-primary">${EF.esc(event.type)}</span></td>
+                    <td>${formatCurrency(event.budget)}</td>
+                    <td>${EF.seatsCell(event)}</td>
+                    <td>${getStatusBadge(event.status)}</td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-icon btn-sm" onclick="viewEvent(${event.id})" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${EF.canManage(event) ? `
+                            <button class="btn btn-icon btn-sm" onclick="editEventById(${event.id})" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-icon btn-sm" onclick="deleteEventById(${event.id})" title="Delete" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">
+                                <i class="fas fa-trash"></i>
+                            </button>` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function viewEvent(eventId) {
+            const event = allEvents.find(e => e.id === eventId);
+            if (!event) return;
+
+            const content = document.getElementById('eventDetailContent');
+            content.innerHTML = `
+                ${EF.posterHtml(event, 'ef-detail-poster')}
+                <div class="event-detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">Event Name</div>
+                        <div class="detail-value">${EF.esc(event.name)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Type</div>
+                        <div class="detail-value"><span class="badge badge-primary">${EF.esc(event.type)}</span></div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Date</div>
+                        <div class="detail-value">${formatDate(event.eventDate)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Time</div>
+                        <div class="detail-value">${EF.esc(event.eventTime || 'Not specified')}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Status</div>
+                        <div class="detail-value">${getStatusBadge(event.status)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Location</div>
+                        <div class="detail-value">${EF.esc(event.location)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Budget</div>
+                        <div class="detail-value">${formatCurrency(event.budget)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Attendees</div>
+                        <div class="detail-value">${event.attendees || 'Not specified'}</div>
+                    </div>
+                </div>
+                ${event.description ? `
+                <div style="margin-top: 1.5rem;">
+                    <div class="detail-label" style="margin-bottom: 0.5rem;">Description</div>
+                    <p style="color: #64748b;">${EF.esc(event.description)}</p>
+                </div>
+                ` : ''}
+                ${event.participants && event.participants.length > 0 ? `
+                <div style="margin-top: 1.5rem;">
+                    <div class="detail-label" style="margin-bottom: 1rem;">Participants</div>
+                    <ul class="participant-list">
+                        ${event.participants.map(p => `
+                            <li class="participant-item">
+                                <div class="participant-avatar">${EF.esc(p.name.charAt(0))}</div>
+                                <div>
+                                    <div style="font-weight: 600;">${EF.esc(p.name)}</div>
+                                    <div style="font-size: 0.875rem; color: #64748b;">${EF.esc(p.role)}</div>
+                                </div>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+                ` : ''}
+                <div id="eventRegPanel"></div>
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    ${EF.canManage(event) ? `<button class="btn btn-primary" onclick="editEventById(${event.id}); closeModal('eventDetailModal')">
+                        <i class="fas fa-edit"></i> Edit Event
+                    </button>` : ''}
+                    <button class="btn btn-outline" onclick="closeModal('eventDetailModal')">
+                        Close
+                    </button>
+                </div>
+            `;
+
+            openModal('eventDetailModal');
+            EF.renderRegistrationPanel(event);
+        }
+
+        function editEventById(eventId) {
+            const event = allEvents.find(e => e.id === eventId);
+            if (!event) return;
+
+            document.getElementById('editEventId').value = event.id;
+            document.getElementById('editEventName').value = event.name;
+            document.getElementById('editEventType').value = event.type;
+            document.getElementById('editEventDate').value = event.eventDate;
+            document.getElementById('editEventTime').value = event.eventTime || '';
+            document.getElementById('editEventLocation').value = event.location;
+            document.getElementById('editEventBudget').value = event.budget;
+            document.getElementById('editEventStatus').value = event.status;
+            document.getElementById('editEventAttendees').value = event.attendees || '';
+            document.getElementById('editEventCapacity').value = event.capacity || '';
+            const rm = document.getElementById('editRemovePoster');
+            rm.classList.toggle('hidden', !event.posterUrl);
+            rm.onclick = () => EF.removePoster(event.id);
+
+            openModal('editEventModal');
+        }
+
+         async function deleteEventById(eventId) {
+            const event = allEvents.find(e => e.id === eventId);
+            if (!confirm(`Are you sure you want to delete "${event.name}"?`)) return;
+
+            try {
+                await deleteEvent(eventId);
+                addNotification(`✅ Event "${event.name}" deleted successfully!`, 'success', 5000);
+                await fetchAllEvents();
+                loadAllEvents();
+                if (document.getElementById('dashboard').classList.contains('active')) {
+                    loadDashboard();
+                }
+            } catch (error) {
+                addNotification(`❌ Failed to delete event: ${error.message}`, 'error', 7000);
+            }
+        }
+
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.classList.remove('active');
+        }
+
+         async function handleCreateEvent(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            const eventData = {
+                name: formData.get('name'),
+                eventDate: formData.get('eventDate'),
+                eventTime: formData.get('eventTime'),
+                location: formData.get('location'),
+                type: formData.get('type'),
+                budget: parseFloat(formData.get('budget')) || 0,
+                status: 'Upcoming',
+                attendees: parseInt(formData.get('attendees')) || 0,
+                capacity: parseInt(formData.get('capacity')) || parseInt(formData.get('attendees')) || 0,
+                description: formData.get('description') || '',
+                contactEmail: formData.get('contactEmail') || '',
+                participants: []
+            };
+
+            try {
+                const created = await createEvent(eventData);
+                try {
+                    await EF.uploadPoster(created.id, formData.get('poster'));
+                } catch (posterError) {
+                    addNotification(`⚠️ Event created, but the poster was not uploaded: ${posterError.message}`, 'error', 7000);
+                }
+                addNotification(`✅ Event "${created.name}" created successfully!`, 'success', 5000);
+                e.target.reset();
+                await fetchAllEvents();
+                showPage('events');
+            } catch (error) {
+                addNotification(`❌ Failed to create event: ${error.message}`, 'error', 7000);
+            }
+        }
+
+
+        async function handleEditEvent(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const eventId = parseInt(formData.get('id'));
+            
+            const event = allEvents.find(e => e.id === eventId);
+            if (!event) return;
+
+            const eventData = {
+                ...event,
+                name: formData.get('name'),
+                eventDate: formData.get('eventDate'),
+                eventTime: formData.get('eventTime'),
+                location: formData.get('location'),
+                type: formData.get('type'),
+                budget: parseFloat(formData.get('budget')) || 0,
+                status: formData.get('status'),
+                attendees: parseInt(formData.get('attendees')) || 0,
+                capacity: parseInt(formData.get('capacity')) || 0
+            };
+
+            try {
+                const updated = await updateEvent(eventId, eventData);
+                try {
+                    await EF.uploadPoster(eventId, formData.get('poster'));
+                } catch (posterError) {
+                    addNotification(`⚠️ Event saved, but the poster was not uploaded: ${posterError.message}`, 'error', 7000);
+                }
+                addNotification(`✅ Event "${updated.name}" updated successfully!`, 'success', 5000);
+                closeModal('editEventModal');
+                await fetchAllEvents();
+                loadAllEvents();
+                if (document.getElementById('dashboard').classList.contains('active')) {
+                    loadDashboard();
+                }
+            } catch (error) {
+                addNotification(`❌ Failed to update event: ${error.message}`, 'error', 7000);
+            }
+        }
+
+
+        async function loadCalendar() {
+            await fetchAllEvents();
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            
+            document.getElementById('calendarMonth').textContent = 
+                `${monthNames[currentMonth]} ${currentYear}`;
+
+            const firstDay = new Date(currentYear, currentMonth, 1);
+            const lastDay = new Date(currentYear, currentMonth + 1, 0);
+            const prevLastDay = new Date(currentYear, currentMonth, 0);
+            
+            const firstDayIndex = firstDay.getDay();
+            const lastDayIndex = lastDay.getDay();
+            const prevDays = firstDayIndex;
+            const nextDays = 6 - lastDayIndex;
+
+            const calendarGrid = document.getElementById('calendarGrid');
+            
+            const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            let html = dayHeaders.map(day => 
+                `<div class="calendar-day-header">${day}</div>`
+            ).join('');
+
+            for (let i = prevDays; i > 0; i--) {
+                const day = prevLastDay.getDate() - i + 1;
+                html += `<div class="calendar-day other-month">
+                    <div class="calendar-day-number">${day}</div>
+                </div>`;
+            }
+
+            const today = new Date();
+            for (let day = 1; day <= lastDay.getDate(); day++) {
+                const date = new Date(currentYear, currentMonth, day);
+                const dateStr = date.toISOString().split('T')[0];
+                
+                const dayEvents = allEvents.filter(e => e.eventDate === dateStr);
+                
+                const isToday = date.toDateString() === today.toDateString();
+                
+                html += `<div class="calendar-day ${isToday ? 'today' : ''}" onclick="showDayEvents('${dateStr}')">
+                    <div class="calendar-day-number">${day}</div>
+                    <div class="calendar-events">
+                        ${dayEvents.slice(0, 2).map(e => 
+                            `<div style="font-size: 0.65rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                <span class="calendar-event-dot" style="background: var(--primary);"></span>
+                                ${EF.esc(e.name)}
+                            </div>`
+                        ).join('')}
+                        ${dayEvents.length > 2 ? `<div style="font-size: 0.65rem; color: var(--primary);">+${dayEvents.length - 2} more</div>` : ''}
+                    </div>
+                </div>`;
+            }
+
+            for (let i = 1; i <= nextDays; i++) {
+                html += `<div class="calendar-day other-month">
+                    <div class="calendar-day-number">${i}</div>
+                </div>`;
+            }
+
+            calendarGrid.innerHTML = html;
+        }
+
+        function showDayEvents(dateStr) {
+            const dayEvents = allEvents.filter(e => e.eventDate === dateStr);
+            
+            if (dayEvents.length === 0) {
+                alert('No events on this day');
+                return;
+            }
+
+            const content = document.getElementById('eventDetailContent');
+            const formattedDate = formatDate(dateStr);
+            
+            content.innerHTML = `
+                <h3 style="margin-bottom: 1rem;">Events on ${formattedDate}</h3>
+                ${dayEvents.map(event => `
+                    <div style="padding: 1rem; border: 1px solid var(--border-light); border-radius: 0.5rem; margin-bottom: 1rem; cursor: pointer;" onclick="closeModal('eventDetailModal'); viewEvent(${event.id})">
+                        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem;">${EF.esc(event.name)}</div>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.875rem; color: #64748b;">
+                            <span><i class="fas fa-clock"></i> ${EF.esc(event.eventTime || 'Time not set')}</span>
+                            <span><i class="fas fa-map-marker-alt"></i> ${EF.esc(event.location)}</span>
+                            <span>${getStatusBadge(event.status)}</span>
+                        </div>
+                    </div>
+                `).join('')}
+                <button class="btn btn-outline" onclick="closeModal('eventDetailModal')" style="margin-top: 1rem;">Close</button>
+            `;
+            
+            openModal('eventDetailModal');
+        }
+
+        function previousMonth() {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar();
+        }
+
+        function nextMonth() {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar();
+        }
+
+        function goToToday() {
+            const today = new Date();
+            currentMonth = today.getMonth();
+            currentYear = today.getFullYear();
+            renderCalendar();
+        }
+
+        async function loadAnalytics() {
+            const analytics = await fetchAnalytics();
+            if (!analytics) return;
+
+            const statsContainer = document.getElementById('analyticsStats');
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value">${formatCurrency(analytics.totalBudget)}</div>
+                            <div class="stat-label">Total Budget</div>
+                        </div>
+                        <div class="stat-icon success">
+                            <i class="fas fa-rupee-sign"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value">${new Intl.NumberFormat('en-IN').format(analytics.totalAttendees)}</div>
+                            <div class="stat-label">Total Attendees</div>
+                        </div>
+                        <div class="stat-icon primary">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value">${analytics.successRate.toFixed(1)}%</div>
+                            <div class="stat-label">Success Rate</div>
+                        </div>
+                        <div class="stat-icon success">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value">${formatCurrency(analytics.averageBudget)}</div>
+                            <div class="stat-label">Avg Budget</div>
+                        </div>
+                        <div class="stat-icon warning">
+                            <i class="fas fa-calculator"></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            renderCharts(analytics);
+        }
+
+        function renderCharts(analytics) {
+            Object.values(charts).forEach(chart => {
+                if (chart) chart.destroy();
+            });
+            charts = {};
+
+            const eventsByTypeCtx = document.getElementById('eventsByTypeChart');
+            if (eventsByTypeCtx && analytics.eventsByType) {
+                charts.eventsByType = new Chart(eventsByTypeCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(analytics.eventsByType),
+                        datasets: [{
+                            data: Object.values(analytics.eventsByType),
+                            backgroundColor: [
+                                '#6366f1', '#8b5cf6', '#10b981', 
+                                '#f59e0b', '#ef4444', '#06b6d4',
+                                '#ec4899', '#14b8a6'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 15,
+                                    font: { size: 12 }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            const budgetByTypeCtx = document.getElementById('budgetByTypeChart');
+            if (budgetByTypeCtx && analytics.budgetByType) {
+                charts.budgetByType = new Chart(budgetByTypeCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(analytics.budgetByType),
+                        datasets: [{
+                            label: 'Budget (₹)',
+                            data: Object.values(analytics.budgetByType),
+                            backgroundColor: '#6366f1',
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₹' + new Intl.NumberFormat('en-IN', {
+                                            notation: 'compact',
+                                            compactDisplay: 'short'
+                                        }).format(value);
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            const monthlyEventsCtx = document.getElementById('monthlyEventsChart');
+            if (monthlyEventsCtx && analytics.eventsByMonth) {
+                const sortedMonths = Object.keys(analytics.eventsByMonth).sort();
+                charts.monthlyEvents = new Chart(monthlyEventsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: sortedMonths.map(m => {
+                            const [year, month] = m.split('-');
+                            return new Date(year, month - 1).toLocaleDateString('en-IN', { 
+                                month: 'short', 
+                                year: 'numeric' 
+                            });
+                        }),
+                        datasets: [{
+                            label: 'Events',
+                            data: sortedMonths.map(m => analytics.eventsByMonth[m]),
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            const monthlyBudgetCtx = document.getElementById('monthlyBudgetChart');
+            if (monthlyBudgetCtx && analytics.budgetByMonth) {
+                const sortedMonths = Object.keys(analytics.budgetByMonth).sort();
+                charts.monthlyBudget = new Chart(monthlyBudgetCtx, {
+                    type: 'line',
+                    data: {
+                        labels: sortedMonths.map(m => {
+                            const [year, month] = m.split('-');
+                            return new Date(year, month - 1).toLocaleDateString('en-IN', { 
+                                month: 'short', 
+                                year: 'numeric' 
+                            });
+                        }),
+                        datasets: [{
+                            label: 'Budget (₹)',
+                            data: sortedMonths.map(m => analytics.budgetByMonth[m]),
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₹' + new Intl.NumberFormat('en-IN', {
+                                            notation: 'compact',
+                                            compactDisplay: 'short'
+                                        }).format(value);
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            if (!searchInput) return;
+
+            let searchTimeout;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                const query = e.target.value.trim();
+                
+                if (!query) {
+                    renderAllEvents(allEvents);
+                    return;
+                }
+
+                searchTimeout = setTimeout(async () => {
+                    try {
+                        if (useMockData) {
+                            const filtered = allEvents.filter(event => 
+                                event.name.toLowerCase().includes(query.toLowerCase()) ||
+                                event.location.toLowerCase().includes(query.toLowerCase()) ||
+                                event.type.toLowerCase().includes(query.toLowerCase()) ||
+                                (event.description && event.description.toLowerCase().includes(query.toLowerCase()))
+                            );
+                            console.log(`🔍 Local search: found ${filtered.length} results for "${query}"`);
+                            renderAllEvents(filtered);
+                        } else {
+                            const response = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`);
+                            if (!response.ok) throw new Error('Search failed');
+                            const results = await response.json();
+                            console.log(`🔍 Backend search: found ${results.length} results for "${query}"`);
+                            renderAllEvents(results);
+                        }
+                    } catch (error) {
+                        console.error('❌ Search error:', error);
+                        renderAllEvents(allEvents);
+                    }
+                }, 300);
+            });
+        }
+        
+         let notifications = [];
+        const MAX_NOTIFICATIONS = 10;
+
+        function addNotification(message, type = 'info', duration = 5000) {
+            const notification = {
+                id: Date.now(),
+                message,
+                type,
+                timestamp: new Date(),
+                read: false
+            };
+            
+            notifications.unshift(notification);
+            
+            if (notifications.length > MAX_NOTIFICATIONS) {
+                notifications = notifications.slice(0, MAX_NOTIFICATIONS);
+            }
+            
+            console.log(`📢 [${type.toUpperCase()}] ${message}`);
+            
+            if (duration > 0 && (type === 'success' || type === 'info')) {
+                setTimeout(() => {
+                    removeNotification(notification.id);
+                }, duration);
+            }
+            
+            updateNotificationBadge();
+            return notification.id;
+        }
+
+        function removeNotification(id) {
+            notifications = notifications.filter(n => n.id !== id);
+            updateNotificationBadge();
+        }
+
+        function updateNotificationBadge() {
+            const unreadCount = notifications.filter(n => !n.read).length;
+            const notificationBtn = document.querySelector('.notification-btn');
+            if (notificationBtn) {
+                let badge = notificationBtn.querySelector('.notification-badge');
+                if (unreadCount > 0) {
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'notification-badge';
+                        badge.style.cssText = `
+                            position: absolute;
+                            top: -8px;
+                            right: -8px;
+                            background: #ef4444;
+                            color: white;
+                            border-radius: 50%;
+                            width: 20px;
+                            height: 20px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 12px;
+                            font-weight: bold;
+                        `;
+                        notificationBtn.style.position = 'relative';
+                        notificationBtn.appendChild(badge);
+                    }
+                    badge.textContent = Math.min(unreadCount, 9) + (unreadCount > 9 ? '+' : '');
+                } else if (badge) {
+                    badge.remove();
+                }
+            }
+        }
+
+        function showNotificationsPanel() {
+            const content = document.getElementById('eventDetailContent');
+            
+            content.innerHTML = `
+                <h3 style="margin-bottom: 1rem;">Notifications</h3>
+                ${notifications.length === 0 ? `
+                    <div style="text-align: center; padding: 2rem; color: #64748b;">
+                        <i class="fas fa-bell" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                        <p>No notifications yet</p>
+                    </div>
+                ` : `
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        ${notifications.map(notif => `
+                            <div style="padding: 1rem; border: 1px solid var(--border-light); border-radius: 0.5rem; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: flex-start;">
+                                <div>
+                                    <div style="font-weight: 600; margin-bottom: 0.25rem;">${EF.esc(notif.message)}</div>
+                                    <div style="font-size: 0.8rem; color: #64748b;">
+                                        ${new Date(notif.timestamp).toLocaleTimeString('en-IN')}
+                                    </div>
+                                    <span class="badge badge-${notif.type === 'success' ? 'success' : notif.type === 'error' ? 'danger' : 'primary'}" style="margin-top: 0.5rem;">
+                                        ${notif.type}
+                                    </span>
+                                </div>
+                                <button class="close-modal" onclick="removeNotification(${notif.id}); showNotificationsPanel();" style="background: none; border: none; cursor: pointer;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
+                <button class="btn btn-outline" onclick="closeModal('eventDetailModal')" style="margin-top: 1rem; width: 100%;">Close</button>
+            `;
+            
+            openModal('eventDetailModal');
+        }
+
+
+        async function handleCreateEvent(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            const eventData = {
+                name: formData.get('name'),
+                eventDate: formData.get('eventDate'),
+                eventTime: formData.get('eventTime'),
+                location: formData.get('location'),
+                type: formData.get('type'),
+                budget: parseFloat(formData.get('budget')) || 0,
+                status: 'Upcoming',
+                attendees: parseInt(formData.get('attendees')) || 0,
+                capacity: parseInt(formData.get('capacity')) || parseInt(formData.get('attendees')) || 0,
+                description: formData.get('description') || '',
+                contactEmail: formData.get('contactEmail') || '',
+                participants: []
+            };
+
+            try {
+                const created = await createEvent(eventData);
+                try {
+                    await EF.uploadPoster(created.id, formData.get('poster'));
+                } catch (posterError) {
+                    addNotification(`⚠️ Event created, but the poster was not uploaded: ${posterError.message}`, 'error', 7000);
+                }
+                addNotification(`✅ Event "${created.name}" created successfully!`, 'success', 5000);
+                e.target.reset();
+                await fetchAllEvents();
+                showPage('events');
+            } catch (error) {
+                addNotification(`❌ Failed to create event: ${error.message}`, 'error', 7000);
+            }
+        }
+
+        async function handleEditEvent(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const eventId = parseInt(formData.get('id'));
+            
+            const event = allEvents.find(e => e.id === eventId);
+            if (!event) return;
+
+            const eventData = {
+                ...event,
+                name: formData.get('name'),
+                eventDate: formData.get('eventDate'),
+                eventTime: formData.get('eventTime'),
+                location: formData.get('location'),
+                type: formData.get('type'),
+                budget: parseFloat(formData.get('budget')) || 0,
+                status: formData.get('status'),
+                attendees: parseInt(formData.get('attendees')) || 0,
+                capacity: parseInt(formData.get('capacity')) || 0
+            };
+
+            try {
+                const updated = await updateEvent(eventId, eventData);
+                try {
+                    await EF.uploadPoster(eventId, formData.get('poster'));
+                } catch (posterError) {
+                    addNotification(`⚠️ Event saved, but the poster was not uploaded: ${posterError.message}`, 'error', 7000);
+                }
+                addNotification(`✅ Event "${updated.name}" updated successfully!`, 'success', 5000);
+                closeModal('editEventModal');
+                await fetchAllEvents();
+                loadAllEvents();
+                if (document.getElementById('dashboard').classList.contains('active')) {
+                    loadDashboard();
+                }
+            } catch (error) {
+                addNotification(`❌ Failed to update event: ${error.message}`, 'error', 7000);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const pageName = link.getAttribute('data-page');
+                    if (pageName) showPage(pageName);
+                });
+            });
+
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+            
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                body.classList.add('dark-mode');
+                const icon = themeToggle.querySelector('i');
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            }
+            
+            if (themeToggle) {
+                themeToggle.addEventListener('click', () => {
+                    body.classList.toggle('dark-mode');
+                    const icon = themeToggle.querySelector('i');
+                    if (body.classList.contains('dark-mode')) {
+                        icon.classList.remove('fa-moon');
+                        icon.classList.add('fa-sun');
+                        localStorage.setItem('theme', 'dark');
+                    } else {
+                        icon.classList.remove('fa-sun');
+                        icon.classList.add('fa-moon');
+                        localStorage.setItem('theme', 'light');
+                    }
+                });
+            }
+
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('collapsed');
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.toggle('mobile-open');
+                    }
+                });
+            }
+
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.remove('active');
+                    }
+                });
+            });
+
+            const createForm = document.getElementById('createEventForm');
+            if (createForm) {
+                createForm.addEventListener('submit', handleCreateEvent);
+            }
+
+            const editForm = document.getElementById('editEventForm');
+            if (editForm) {
+                editForm.addEventListener('submit', handleEditEvent);
+            }
+
+                        setupSearch();
+
+            // NEW FIX #7: Add notification bell click handler
+            const notificationBtn = document.querySelector('.notification-btn');
+            if (notificationBtn) {
+                notificationBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showNotificationsPanel();
+                });
+            }
+
+            EF.init();
+            if (await EF.boot()) {
+                await fetchAllEvents();
+                loadDashboard();
+            }
+
+            
+            console.log('%c✅ EventFlow Loaded Successfully!', 'color: #10b981; font-size: 16px; font-weight: bold;');
+            console.log(`%cMode: ${useMockData ? 'Mock Data (Backend not available)' : 'Live Backend'}`, 'color: #6366f1; font-size: 14px;');
+        });
+    </script>
+    <script src="js/eventflow-extensions.js"></script>
+</body>
+</html>
